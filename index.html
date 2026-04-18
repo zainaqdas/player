@@ -69,9 +69,10 @@
 
   /* ── Progress ── */
   .progress-row { display: flex; align-items: center; gap: 10px; }
-  .progress-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; cursor: pointer; transition: height 0.15s; }
+  .progress-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.15); border-radius: 2px; cursor: pointer; transition: height 0.15s; position: relative; overflow: hidden; }
   .progress-wrap:hover { height: 6px; }
-  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; width: 0%; pointer-events: none; }
+  .progress-buffer { position: absolute; top: 0; left: 0; height: 100%; background: rgba(255,255,255,0.35); border-radius: 2px; width: 0%; pointer-events: none; transition: width 0.4s linear; }
+  .progress-fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--accent); border-radius: 2px; width: 0%; pointer-events: none; z-index: 1; }
   .time-label { font-family: var(--mono); font-size: 11px; color: rgba(255,255,255,0.75); white-space: nowrap; min-width: 90px; text-align: right; }
 
   /* ── Bottom row ── */
@@ -198,6 +199,7 @@
         <!-- Progress bar -->
         <div class="progress-row">
           <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-buffer" id="progress-buffer"></div>
             <div class="progress-fill" id="progress-fill"></div>
           </div>
           <span class="time-label" id="time-label">0:00 / 0:00</span>
@@ -457,7 +459,23 @@
     var pct = (video.duration && isFinite(video.duration)) ? (video.currentTime / video.duration * 100) : 0;
     document.getElementById('progress-fill').style.width = pct + '%';
     document.getElementById('time-label').textContent = formatTime(video.currentTime) + ' / ' + formatTime(video.duration);
+    updateBuffer();
   });
+
+  function updateBuffer() {
+    if (!video.duration || !isFinite(video.duration)) return;
+    var buf = video.buffered;
+    var bufPct = 0;
+    for (var i = 0; i < buf.length; i++) {
+      if (buf.start(i) <= video.currentTime && video.currentTime <= buf.end(i)) {
+        bufPct = (buf.end(i) / video.duration) * 100;
+        break;
+      }
+    }
+    document.getElementById('progress-buffer').style.width = bufPct + '%';
+  }
+
+  video.addEventListener('progress', updateBuffer);
   document.getElementById('progress-wrap').addEventListener('click', function(e) {
     if (!video.duration || !isFinite(video.duration)) return;
     var rect = this.getBoundingClientRect();
